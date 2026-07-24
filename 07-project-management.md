@@ -12,11 +12,11 @@ The first is a schema problem, and it has a clear answer. Model a task as a reco
 
 The second is an operating problem that no schema fixes, and it is the one I lived through. How do you keep building when the client is inside the base editing it while you work, deleting the fields you just made, and refusing to let you touch the third of the tables they built themselves?
 
-So this module has two halves. The first half is the project-management architecture. I built it for the magazine advertising client (AY Media), who runs articles, ads, photo shoots, and design work through repeatable stages. The architecture is good. It is also more than either of my two clients strictly needed. I will say that plainly as I go, because that is the honest description.
+So this module has two halves. The first half is the project-management architecture. I built it for the magazine advertising client (Client B), who runs articles, ads, photo shoots, and design work through repeatable stages. The architecture is good. It is also more than either of my two clients strictly needed. I will say that plainly as I go, because that is the honest description.
 
 The second half is about running a build while the client edits the base underneath me. The architecture is one thing. Keeping a co-owned base correct while two people edit it is another, and it is the part I want you to see clearly.
 
-One note on scope before the patterns, because I state scope up front in every design. The AY Media task model was built for a shop with a handful of staff, a fixed set of repeatable production stages per advertisement, and dozens of projects a month, not thousands. It is not designed for a hundred-person agency that plans capacity per person. The non-goal matters as much as the goal. If you have five people and forty projects, this architecture is the right size. If you have five hundred people, you have outgrown Airtable for this, and no number of junction tables will fix that.
+One note on scope before the patterns, because I state scope up front in every design. The Client B task model was built for a shop with a handful of staff, a fixed set of repeatable production stages per advertisement, and dozens of projects a month, not thousands. It is not designed for a hundred-person agency that plans capacity per person. The non-goal matters as much as the goal. If you have five people and forty projects, this architecture is the right size. If you have five hundred people, you have outgrown Airtable for this, and no number of junction tables will fix that.
 
 ## Prerequisites
 
@@ -35,7 +35,7 @@ If you have those six, this module is short. If you do not, this module will rea
 
 **The pattern in one sentence:** each task is its own record in a Tasks table, linked to its project, with its own status, date, and owner, and the set of tasks for a new project is created automatically by looping a Template Tasks table.
 
-### Case study — 2025-11-25, AY Media
+### Case study — 2025-11-25, Client B
 
 I came into this work with a base I had built the previous weekend for the magazine client. They run production work in stages. An advertisement gets written, photographed, designed, and laid out. I had modeled those stages the way most people first do, as status fields and single-select options (a field where you pick one value from a fixed list) on the article and order tables. I wanted a solid pattern for a changelog. I could not answer the changelog question until I answered the task question, so I had to step back one level.
 
@@ -57,7 +57,7 @@ Repeating work becomes rows, not columns. A task is its own record, created from
 
 Two honest marks on this one.
 
-First, this is a lot to take in, and not every client needs all of it. For the medical-coding client (Coding Clarified) I never needed the template-task cascade at all. That client's repeatable unit was a student's enrollment, not a multi-stage production task with a different owner per stage. The full architecture was worth it at AY Media and would have been overhead at Coding Clarified. It is the right answer for shops with fixed, repeatable production stages that each have owners, and unnecessary for shops without them. Plenty of real bases are unclear on exactly this question: what are tasks, what are statuses, how do they get assigned. It is not something you ship to everyone.
+First, this is a lot to take in, and not every client needs all of it. For the medical-coding client (Client A) I never needed the template-task cascade at all. That client's repeatable unit was a student's enrollment, not a multi-stage production task with a different owner per stage. The full architecture was worth it at Client B and would have been overhead at Client A. It is the right answer for shops with fixed, repeatable production stages that each have owners, and unnecessary for shops without them. Plenty of real bases are unclear on exactly this question: what are tasks, what are statuses, how do they get assigned. It is not something you ship to everyone.
 
 Second, my board looked confusing at first because I had modeled statuses as if they were tasks. That is not a flaw in the pattern. It is the pattern working. Once tasks were records, the confusion had a place to resolve to.
 
@@ -67,7 +67,7 @@ Second, my board looked confusing at first because I had modeled statuses as if 
 
 **The pattern in one sentence:** to know how long something spent in each stage, do not overwrite a status field; write a new record every time the status changes, so the history is the rows.
 
-### Case study — 2025-11-25, AY Media
+### Case study — 2025-11-25, Client B
 
 The original ask was the changelog. The photographers wanted their own photo-shoot changelog. The designers wanted a design changelog. I had built a changelog before and found it slow, and I wanted to know whether there was a faster way. The answer follows directly from the tasks-as-records model. A changelog is just tasks-as-records taken one level more detailed.
 
@@ -89,7 +89,7 @@ The cost is real. If you write one record per status change, showing the current
 
 **The pattern in one sentence:** tag each template task with a role, give each staff member a role, assign the matching person when tasks are created, and reach for a junction table exactly when one person plays different roles on different projects.
 
-### Case study — 2025-11-25, AY Media
+### Case study — 2025-11-25, Client B
 
 Once tasks are records, they still need owners, and typing an owner onto every generated task by hand defeats the automation. So I assign owners through roles rather than names. Add a Roles library (designer, PM, CEO, photographer). Tag each template task with the role that should own it. Give each staff member a role. Then in the task-creation automation, or a second automation right after it, find the staff member whose role matches the template task's role and assign them.
 
@@ -101,7 +101,7 @@ Assignment is a lookup against a roles layer, not a hand-typed name. Add a junct
 
 ### Where it broke or changed
 
-This is the clearest place in the whole module where the architecture is more than the client needed. Neither of my two clients had the "same person, different role by project" problem in production. AY Media's people had stable roles. The photographer photographed, the designer designed. So I built the roles library and the role-based assignment, and I never built the junction table, because the third setup describes a company I did not have. I taught myself all three levels so I would recognize the moment the third one becomes necessary. Recognizing it and building it are different acts. Build the level your cardinality actually is. This connects straight back to Module 1's junction-table rule: a junction that turns out to be one-to-one is not a junction, it is a duplicate.
+This is the clearest place in the whole module where the architecture is more than the client needed. Neither of my two clients had the "same person, different role by project" problem in production. Client B's people had stable roles. The photographer photographed, the designer designed. So I built the roles library and the role-based assignment, and I never built the junction table, because the third setup describes a company I did not have. I taught myself all three levels so I would recognize the moment the third one becomes necessary. Recognizing it and building it are different acts. Build the level your cardinality actually is. This connects straight back to Module 1's junction-table rule: a junction that turns out to be one-to-one is not a junction, it is a duplicate.
 
 ---
 
@@ -109,7 +109,7 @@ This is the clearest place in the whole module where the architecture is more th
 
 **The pattern in one sentence:** let external people create a project through a free native Airtable interface form, and the created record fires the same "create tasks from template" automation, so you never pay for a collaborator seat just to let someone start a project.
 
-### Case study — 2025-11-25, AY Media
+### Case study — 2025-11-25, Client B
 
 The client did not want to pay a monthly per-collaborator fee for every rep who needed to start a project. My instinct, from the earlier meetings, was to reach for Fillout (a third-party form builder). But a native Airtable interface form does the job here for free. Build a form for the Projects table, publish it, share the link, and anyone on the web can submit it. The submission creates a project record, and because the automation triggers on record-created, the template-task cascade runs exactly as it would from an internal create. The external submitter needs no seat and no login.
 
@@ -135,7 +135,7 @@ The architecture in the first four lessons is one thing. This is the part the en
 
 ### Case study — 2026-05-14, and the weeks of repair on 2026-06-08
 
-By May of 2026 the AY Media base was five months into a shared build and it showed. The client had built about a third of the tables themselves, and they would not let me change anything they had built. Then they went into the parts I had built and started deleting and changing the fields and the data. This went on for months, which is a large part of why the build took as long as it did. The 2025-11-25 architecture is the reference version. What I had by May of 2026 is what that architecture looks like after five months of two people editing the same base with different ideas of how it worked.
+By May of 2026 the Client B base was five months into a shared build and it showed. The client had built about a third of the tables themselves, and they would not let me change anything they had built. Then they went into the parts I had built and started deleting and changing the fields and the data. This went on for months, which is a large part of why the build took as long as it did. The 2025-11-25 architecture is the reference version. What I had by May of 2026 is what that architecture looks like after five months of two people editing the same base with different ideas of how it worked.
 
 By May, for the first time in the whole engagement, I was the only one touching the base. I had also made a second base and rebuilt the model from scratch, and the client got upset that I had gone ahead and done it. My read at that point: I was going to hand this to them and they were going to break it within about a week, and I had stopped worrying about that.
 
@@ -167,7 +167,7 @@ The second base is the hardest call. It got my clarity back and it upset the cli
 
 **Match the architecture to the client before I teach it back to them.** The full set is a complete and correct system: tasks as records, template cascade, changelog per status change, roles library, junction table, native form. But I came out of building it ready to deploy all of it, and only one of my two clients needed most of it. Now I would start by asking which level of the roles model the client's cardinality actually is, and whether they need per-status durations or just start-and-finish, and I would build exactly that. This is a lot to take in, and I should have read that as a sign to build less, faster.
 
-**Settle table ownership in writing before the co-build starts, not five months in.** The single most expensive thing in the AY Media engagement was not a schema decision. It was that the client and I edited the same base for five months without a written agreement about which tables were theirs to change and which were mine. The second base, the deletions, the repair sessions, the upset: most of it traces back to an ownership boundary that was never written down. I would now open a co-owned build with a one-page statement of which tables each side owns and what "done" looks like at handover.
+**Settle table ownership in writing before the co-build starts, not five months in.** The single most expensive thing in the Client B engagement was not a schema decision. It was that the client and I edited the same base for five months without a written agreement about which tables were theirs to change and which were mine. The second base, the deletions, the repair sessions, the upset: most of it traces back to an ownership boundary that was never written down. I would now open a co-owned build with a one-page statement of which tables each side owns and what "done" looks like at handover.
 
 **Use the blank-base mock earlier and more openly.** I reached for the from-scratch rebuild in month five, out of frustration, and the client experienced it as me going around them. If I had introduced "I'm going to mock the core model in a scratch base so we both understand it, and it is not the thing we ship" in month one as a normal working practice, it would have been a shared tool instead of a move that looked territorial.
 
