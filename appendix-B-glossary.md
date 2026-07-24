@@ -16,7 +16,7 @@ My working vocabulary, in plain English. These are the words that carried the ac
 
 **Library** — my word for a small link-record table of allowed values (publications, ad sizes, ad positions, years). Not a single-select field — a *table* — because the values need to filter each other. A cascade of libraries is what lets a form ask for one attribute at a time and narrow the next dropdown.
 
-**Cascade filter / conditional filter** — a filter on a form field that references the fields chosen above it, so each dropdown only shows options consistent with the earlier choices. The whole AY Media product-selection form was a cascade: class → publication type → publication → issue year → ad size → ad type → ad position → frequency → issue month → special section → product.
+**Cascade filter / conditional filter** — a filter on a form field that references the fields chosen above it, so each dropdown only shows options consistent with the earlier choices. The whole Client B product-selection form was a cascade: class → publication type → publication → issue year → ad size → ad type → ad position → frequency → issue month → special section → product.
 
 **Product-as-filter (the dynamic-filter link field)** — instead of a form asking "which product?", the form asks for each attribute, then a product link-record field with a **dynamic filter** shows only the product whose attributes match everything chosen above. The attributes *are* the filter. This is safer than an automation guessing the product after the fact.
 
