@@ -1,6 +1,6 @@
 # Module 5 — PDF & Document Generation
 
-*From "Systems Thinking for Airtable." Built from the Coding Clarified and AY Media work, July 2025 – June 2026.*
+*From "Systems Thinking for Airtable." Built from the Client A and Client B work, July 2025 – June 2026.*
 
 ---
 
@@ -12,7 +12,7 @@ That last part is what this whole module is about. A generated document holds th
 
 I spent months inside Fillout's PDF integration on two different clients before I understood how narrow its real capability is. Fillout is a form-building tool. It can write values into a template when a form is submitted. It cannot recompute. It cannot branch its outputs. It cannot render a variable number of line items. It cannot read a linked record. Each of those limits cost me a real debugging session before it became a design rule. This module is those rules, in the order I learned to respect them.
 
-Here is the honest ending, stated up front so you read the rest correctly. On AY Media, the entire Fillout-generated-PDF approach was abandoned. By April 2026 I stopped generating the contract PDF in Fillout at all. I moved to filling the client's own Adobe PDF by API. A lot of the mapping work in the middle of this module was for an approach I later dropped. I kept the lessons anyway. The reasons the approach failed are the reasons you design documents the way you do, whatever tool renders them.
+Here is the honest ending, stated up front so you read the rest correctly. On Client B, the entire Fillout-generated-PDF approach was abandoned. By April 2026 I stopped generating the contract PDF in Fillout at all. I moved to filling the client's own Adobe PDF by API. A lot of the mapping work in the middle of this module was for an approach I later dropped. I kept the lessons anyway. The reasons the approach failed are the reasons you design documents the way you do, whatever tool renders them.
 
 ## Prerequisites
 
@@ -29,7 +29,7 @@ If you have those three, the main idea here is simple to say and hard to fully t
 
 **The pattern:** Once Fillout generates a PDF on form submission, it is fixed. Changing the data in Airtable does nothing to the already-generated document. To show a new value, a person has to re-submit the form. That re-triggers the integration and writes a fresh PDF. Design around the re-render, not around a document that updates itself.
 
-### Case study — AY Media, 2026-06-08
+### Case study — Client B, 2026-06-08
 
 I was building the manager-approval loop for advertising contracts. A sales rep submits a contract with a proposed total. A manager can approve it, reject it, or propose a revised total. That revised number lands in Airtable in a field I was calling the proposed contract total. A `resulting` field decides which number is the real one: the proposed figure when it exists, the computed line-item total otherwise.
 
@@ -49,7 +49,7 @@ A rendered document is a copy of the data at render time, not a live view of it.
 
 ### Where it changed
 
-The re-render workflow worked. It shipped for the proposed-versus-resulting total. But notice what it cost. A person has to remember to re-submit. If they do not, the filed PDF silently disagrees with the base. That fragility is one of the reasons the whole Fillout-PDF approach did not last on AY Media. When the document has to stay in agreement with fast-moving data, "someone clicks re-submit" is not a strong enough guarantee. Lesson 5 and the closing note return to this.
+The re-render workflow worked. It shipped for the proposed-versus-resulting total. But notice what it cost. A person has to remember to re-submit. If they do not, the filed PDF silently disagrees with the base. That fragility is one of the reasons the whole Fillout-PDF approach did not last on Client B. When the document has to stay in agreement with fast-moving data, "someone clicks re-submit" is not a strong enough guarantee. Lesson 5 and the closing note return to this.
 
 ---
 
@@ -57,7 +57,7 @@ The re-render workflow worked. It shipped for the proposed-versus-resulting tota
 
 **The pattern:** The field you map onto a document is almost never the raw linked field. A lookup (a field that pulls a value from each linked record) across a one-to-many link repeats values. Map a rollup with `ARRAYUNIQUE` to get one distinct value instead. A raw link-record field (a field that links a record to records in another table) carries record IDs. Map the human-readable name or formula field instead. The document exposes exactly the modeling shortcuts you took, so take none.
 
-### Case study — AY Media, 2026-05-08
+### Case study — Client B, 2026-05-08
 
 The contract PDF was printing the advertiser's QuickBooks Customer ID three times. My first honest reaction, on the recording, was that the duplication was partly my own test data. I had put three of the same QuickBooks IDs in for three different testing records, so some of that was on me.
 
@@ -87,9 +87,9 @@ The lesson inside the lesson. When you are combining duplicate fields down to on
 
 **The pattern:** Fillout runs every PDF integration you configure on every submission. There is no "if this condition, generate this PDF and not those." If different cases need different documents, you cannot select the document inside one form. You move the branch upstream: one form per case, and a single formula field that hands the right form's URL to the right person.
 
-### Case study — Coding Clarified, 2025-08-26
+### Case study — Client A, 2025-08-26
 
-Coding Clarified enrolls medical-coding students, and the enrollment agreement is legally different by state. Florida, Indiana, South Carolina, Texas, and a headquarters default each have their own document. My instinct was one enrollment form that generates the state-appropriate PDF based on the student's state. That instinct is wrong.
+Client A enrolls medical-coding students, and the enrollment agreement is legally different by state. Florida, Indiana, South Carolina, Texas, and a headquarters default each have their own document. My instinct was one enrollment form that generates the state-appropriate PDF based on the student's state. That instinct is wrong.
 
 Fillout by default will not let you select, based on a URL parameter or any other condition, whether a given document should be generated. PDF integrations always run on form submission. You cannot set conditional branches. You cannot tell it: if Florida, then fill out this one PDF and not the other three.
 
@@ -109,7 +109,7 @@ When a tool cannot branch its outputs, do not try to make it. Move the decision 
 
 ### Where it changed
 
-This design held for Coding Clarified because the number of branches was small and fixed: five states. It does not scale to a case where the branches multiply or change often. "One form per case, built and re-tested by hand" is linear human work per case. The moment you feel yourself duplicating and re-mapping forms as a routine chore, the form tool is no longer the right choice. That is exactly the direction the AY Media build eventually went.
+This design held for Client A because the number of branches was small and fixed: five states. It does not scale to a case where the branches multiply or change often. "One form per case, built and re-tested by hand" is linear human work per case. The moment you feel yourself duplicating and re-mapping forms as a routine chore, the form tool is no longer the right choice. That is exactly the direction the Client B build eventually went.
 
 ---
 
@@ -117,7 +117,7 @@ This design held for Coding Clarified because the number of branches was small a
 
 **The pattern:** A Fillout-generated PDF cannot render a variable-length line-item table. The best it returns is a flat array of products next to a parallel array of quantities. And when you parse messy source data into the fields a document reads, do not ask a model to choose which value each row means. Have the model write a deterministic parsing formula, then audit its output. A deterministic parse is one where the same input always produces the same output, by a rule you can read. The document is only as trustworthy as the parse behind it.
 
-### Case study, part one — AY Media, 2026-03-17
+### Case study, part one — Client B, 2026-03-17
 
 I wanted the contract PDF to show each line item as its own row: product, quantity, size, position, one line each. The integration cannot do that. Set the expectation before you over-build toward it. This integration cannot generate dynamic line items.
 
@@ -127,9 +127,9 @@ The closest workaround is to pack each line's pieces into one formula field, so 
 
 And here is its ceiling, which I had filed as a feature request more than once. Formulas do not handle rich text. If they could, you could put line breaks inside the line-item name. No rich text in a formula means no line breaks inside the concatenated line. So the imitation structured line is one long string, not a real table. That limit is a large part of why the AY contract PDF eventually moved off Fillout entirely.
 
-### Case study, part two — the parse behind the document, AY Media 2026-04-14 and the currency bugs
+### Case study, part two — the parse behind the document, Client B 2026-04-14 and the currency bugs
 
-A document is only as correct as the data mapped into it. AY Media's historical data was roughly 15,000 rows of free-text memos. Ad sizes, sections, and positions were buried in a memo column with typos and inconsistent formatting. The tempting move is to hand the whole column to Claude and say "pick the right library value for each row." I did not trust that.
+A document is only as correct as the data mapped into it. Client B's historical data was roughly 15,000 rows of free-text memos. Ad sizes, sections, and positions were buried in a memo column with typos and inconsistent formatting. The tempting move is to hand the whole column to Claude and say "pick the right library value for each row." I did not trust that.
 
 I did not want to trust a model to choose what value should be there without very strict logic. There are two ways to go. One is to tell the model to go through the rows and choose whatever value it thinks should be selected. The other is to use the data from the memo column and ask the model to help build a formula to parse the values. The parsing route also surfaces the typos. The formula can say that if a cell reads "half-horizontal" or "half-horizonta" without the final letter, treat it as half-horizontal page. If there is nothing to map a cell to, tag it as unknown.
 
@@ -137,7 +137,7 @@ The difference is where the judgment lives. Letting the model choose a value per
 
 Currency was where deterministic parsing mattered most, because currency is where format bugs are hardest to see. On the CSV import side, the client's source files carried literal dashes as placeholders in numeric columns. A dash mapped to a currency field errors the import. A dash does not hurt a text field, but it does hurt single-select fields (fields that store one chosen option from a list), currency fields, and others. If you try to map a dash to a currency field in Airtable on import, it can error, because Airtable expects specific formats for currency.
 
-The subtler cousin of that bug is the comma-versus-period separator problem. It took real debugging in the n8n PDF-parsing workflow on Coding Clarified, in the 2025-10-03 session. n8n is a workflow automation tool. A unit price that should have printed as $110 was coming through as $11,000, because a comma was being read where a period belonged. It was supposed to read $110 and it was reading $11,000. The value needed a period where it had a comma.
+The subtler cousin of that bug is the comma-versus-period separator problem. It took real debugging in the n8n PDF-parsing workflow on Client A, in the 2025-10-03 session. n8n is a workflow automation tool. A unit price that should have printed as $110 was coming through as $11,000, because a comma was being read where a period belonged. It was supposed to read $110 and it was reading $11,000. The value needed a period where it had a comma.
 
 The whole lesson is in the open question we did not resolve in the room. Was the bug coming from the model, or did it need to be fixed in the workflow. We argued it out. My read was that the value came from the model, since the whole thing was flowing out of the LLM, and it could be coming out of the LLM in a strange format.
 
@@ -159,9 +159,9 @@ The concatenated-line-item workaround and the parse both worked. But both are ev
 
 **The pattern:** If the only reason a separate signing tool exists is to collect a signature on a document you are already generating, move the signature into the form. Fillout has a signature field type. Used well, it removes DocuSign from the workflow and keeps signing, generating, and storing in one place.
 
-### Case study — Coding Clarified, early build, 2025-07-28
+### Case study — Client A, early build, 2025-07-28
 
-Coding Clarified's enrollment agreement was running through DocuSign. The student filled out enrollment, then went to a separate tool to sign. The signed document lived apart from the base that tracked the student. The plan from the start of the Fillout build was to combine those. Rebuild the enrollment agreement as a Fillout form, populate it dynamically from Airtable, and use Fillout's signature field, a paid feature, to capture the signature in place. Then the generated PDF is already signed and already attached to the student's record.
+Client A's enrollment agreement was running through DocuSign. The student filled out enrollment, then went to a separate tool to sign. The signed document lived apart from the base that tracked the student. The plan from the start of the Fillout build was to combine those. Rebuild the enrollment agreement as a Fillout form, populate it dynamically from Airtable, and use Fillout's signature field, a paid feature, to capture the signature in place. Then the generated PDF is already signed and already attached to the student's record.
 
 A note on sourcing, in the spirit of the rest of this course. This early call exists only as a Fathom summary, not a full verified transcript. So I am reconstructing the decision from that summary rather than a word-for-word record. What the summary records is the decision and its shape: transition from DocuSign to Fillout, using Fillout's signature field type, a paid feature, to replace the DocuSign functionality. The action item that followed was mine. Copy the full enrollment-agreement text into the Fillout form and add signature fields for each page.
 
@@ -173,7 +173,7 @@ Count the tools in a document workflow and delete the ones that exist only to br
 
 ### Where it changed
 
-Two honest qualifications. First, the Fillout signature field is a paid feature. So "remove DocuSign" is not "remove cost." It is "consolidate cost into the tool you already run," which is only a win if the form tool is one you are keeping. Second, on AY Media the whole Fillout-generated-PDF approach was abandoned for Adobe, and the signing story moved with it. The AY workflow became: download the generated contract, send it for signature outside the form, and attach the signed copy back through a deliberately minimal one-field update form. So "signature fields in the form" was the right consolidation for Coding Clarified's enrollment agreement. It was not where the more document-heavy AY build ended up. The consolidation instinct was right. The specific tool was not permanent.
+Two honest qualifications. First, the Fillout signature field is a paid feature. So "remove DocuSign" is not "remove cost." It is "consolidate cost into the tool you already run," which is only a win if the form tool is one you are keeping. Second, on Client B the whole Fillout-generated-PDF approach was abandoned for Adobe, and the signing story moved with it. The AY workflow became: download the generated contract, send it for signature outside the form, and attach the signed copy back through a deliberately minimal one-field update form. So "signature fields in the form" was the right consolidation for Client A's enrollment agreement. It was not where the more document-heavy AY build ended up. The consolidation instinct was right. The specific tool was not permanent.
 
 ---
 
