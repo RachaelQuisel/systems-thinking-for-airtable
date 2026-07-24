@@ -17,7 +17,7 @@ So this module is not about how to build a Zap (an automation built in Zapier). 
 
 I got every one of these wrong at least once, in a recorded session. The patterns below are what I use now so I don't get them wrong again.
 
-I built these on two production systems. The first was the Coding Clarified medical-coding platform, which ran on WooCommerce, Airtable, Fillout, and Zapier, and tracked students, orders, and progress trackers. The second, later, was an n8n pipeline that parsed PDFs into Monday.com and Airtable. The tools change. The four questions do not.
+I built these on two production systems. The first was the Client A medical-coding platform, which ran on WooCommerce, Airtable, Fillout, and Zapier, and tracked students, orders, and progress trackers. The second, later, was an n8n pipeline that parsed PDFs into Monday.com and Airtable. The tools change. The four questions do not.
 
 ---
 
@@ -37,7 +37,7 @@ So: model the thing (Module 1), normalize the data (Module 2), run the workflow 
 
 ### Case study — 2025-07-30, the WooCommerce zap
 
-Every WooCommerce purchase at Coding Clarified was adding a new row, which produced duplicate students. The fix was a two-table model (Students, one row per person; Orders, one row per purchase) and a Zap that searched before it wrote. The unique key was the AAPC number, the one identifier a student typed at purchase.
+Every WooCommerce purchase at Client A was adding a new row, which produced duplicate students. The fix was a two-table model (Students, one row per person; Orders, one row per purchase) and a Zap that searched before it wrote. The unique key was the AAPC number, the one identifier a student typed at purchase.
 
 Here is how the Zap works, start to finish. A student makes a purchase in WooCommerce. That order triggers a search for the student. I search the Orders table by the AAPC field, because that is the unique identifier coming from WooCommerce.
 
@@ -91,7 +91,7 @@ This one held for the entire eleven months. The only refinement was the fallback
 
 ### Case study — 2025-08-28, the active tracker
 
-A Coding Clarified student can hold several active orders at once. The weekly send automation finds students, not orders, so each student needs exactly one current tracker even when they have multiple purchases. Two weeks earlier, on 2025-08-12, I had described the collapse: keep only the active orders, sort them by order date earliest to latest, take the last one, and show its tracker on the student. That gives each student one active tracker even when they hold multiple active orders.
+A Client A student can hold several active orders at once. The weekly send automation finds students, not orders, so each student needs exactly one current tracker even when they have multiple purchases. Two weeks earlier, on 2025-08-12, I had described the collapse: keep only the active orders, sort them by order date earliest to latest, take the last one, and show its tracker on the student. That gives each student one active tracker even when they hold multiple active orders.
 
 The refinement on 2025-08-28 is the part I want to teach, because it is the difference between "usually right" and "always right." Students buy products that have no tracker at all, for example a practice exam. If I just took the most recent purchase, a later exam purchase would become the student's "latest" and push them onto a blank or wrong tracker. The correction was about order of operations. First, the system filters out any records where the product is not a tracker product. Then, from the records that remain, it sorts. Then it takes the last one. The filtering happens before the sorting.
 
