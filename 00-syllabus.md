@@ -8,7 +8,7 @@
 
 ## Why this exists
 
-For eleven months I built two production systems end to end. The first was a medical-coding education platform (Coding Clarified) running on WooCommerce, Airtable, Fillout, and Zapier, tracking students, orders, and progress. The second was a magazine advertising operation (AY Media) running on Airtable and QuickBooks, tracking advertisers, contracts, line items, insertion orders, inventory, and billing.
+For eleven months I built two production systems end to end. The first was a medical-coding education platform (Client A) running on WooCommerce, Airtable, Fillout, and Zapier, tracking students, orders, and progress. The second was a magazine advertising operation (Client B) running on Airtable and QuickBooks, tracking advertisers, contracts, line items, insertion orders, inventory, and billing.
 
 This course is what I pulled out of that work. The patterns that stayed true across both systems. The decisions I got right. The ones I reversed. And the handful of ideas that changed how I build.
 
