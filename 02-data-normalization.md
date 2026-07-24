@@ -30,9 +30,9 @@ So the whole of Module 2 rests on one sentence from Module 1: model the thing be
 
 **A recurring event and the entity it belongs to are two tables; you search-or-update the entity on a unique key and you always create the event.**
 
-### Case study — Coding Clarified, 2025-07-29
+### Case study — Client A, 2025-07-29
 
-The Coding Clarified base had one WooCommerce feed and one problem. Every purchase appended a new row, so a student who bought three products showed up as three students. The client, Janine, was also having students re-enter their Social Security number and AAPC number on every purchase. That meant the "student" data got worse with each order, not better.
+The Client A base had one WooCommerce feed and one problem. Every purchase appended a new row, so a student who bought three products showed up as three students. The client, Janine, was also having students re-enter their Social Security number and AAPC number on every purchase. That meant the "student" data got worse with each order, not better.
 
 The first move is to split the one feed into two tables. Students is one record per person, deduplicated. Orders is one record per purchase, never deduplicated. One WooCommerce order writes to both. It searches Students by a unique key and either updates or creates that one record, and it always creates an Orders record.
 
@@ -70,7 +70,7 @@ The deeper lesson: cardinality decides where a value lives. "A lookup would retu
 
 **A recurring import should find the target record by a stable unique key and update it, never insert; pre-create the target so the import is pure update; and expect to get the key wrong the first time.**
 
-### Case study — Coding Clarified / Blackboard, 2025-09-23
+### Case study — Client A / Blackboard, 2025-09-23
 
 I was importing Blackboard grade CSVs and had no reliable way to attach a grade row to the right student. Names change and get transcribed differently across systems. If the import ran as a plain create, every run would insert students who already existed, and I would be back to duplicates.
 
@@ -110,9 +110,9 @@ The constant across every version of the delivery: the match-and-update discipli
 
 **When a number field has stripped the leading zeros off an identifier, rebuild the identifier with a length-based padding formula, then convert to single-line text and stamp the values so downstream matches work and the processing can be removed.**
 
-### Case study — Coding Clarified, 2025-07-30
+### Case study — Client A, 2025-07-30
 
-The AAPC number is the identifier that ties a Coding Clarified student to their record, and I was matching WooCommerce orders to students on it. The matches were failing for a whole set of students, and I could not see why.
+The AAPC number is the identifier that ties a Client A student to their record, and I was matching WooCommerce orders to students on it. The matches were failing for a whole set of students, and I could not see why.
 
 The reason was that AAPC numbers were stored in a number field. An AAPC number like `00241908` is eight digits with two leading zeros. A number field cannot hold a leading zero, so it stored `241908` as six digits. The exact-match lookup was comparing a six-digit stripped value against the true eight-digit identifier and missing every time.
 
@@ -136,9 +136,9 @@ The general rule this leaves me with: when a key is mangled, figure out exactly 
 
 **To connect migrated records to their parents without creating new records, build a formula match-key, make it the primary field on the target table, then paste the key into the link field so equal keys link and nothing new can be created; leave a row blank rather than force a wrong link.**
 
-### Case study — AY Media, 2026-05-22
+### Case study — Client B, 2026-05-22
 
-AY Media's migration left roughly 693 contract line items with no link to the contract they belonged to. The obvious move, pasting a column of values into the link field (the field that connects a record to records in another table), is dangerous by default. Airtable will create a brand-new record for any value that does not exactly match an existing one, so a near-miss produces a new contract by mistake instead of a link.
+Client B's migration left roughly 693 contract line items with no link to the contract they belonged to. The obvious move, pasting a column of values into the link field (the field that connects a record to records in another table), is dangerous by default. Airtable will create a brand-new record for any value that does not exactly match an existing one, so a near-miss produces a new contract by mistake instead of a link.
 
 The method removes that danger by construction. Step one: build a formula field that concatenates several fields into one unique match-key. Step two: make that formula field the primary field (the first field in a table, which Airtable shows as the record's name) on the target table. Step three: paste the match-keys into the link field. Because the primary field is a formula, it cannot be written to, which means the paste can only link to a row that already exists and can never create a new one.
 
@@ -146,7 +146,7 @@ That single design choice solves two problems at once. First, you now have somet
 
 The second half of the rule is what you do with a row that does not match exactly. You leave it blank. If two values look similar but are not exactly the same, you do not force the link. You leave the row blank and go figure out what is actually going on with it, rather than guessing.
 
-This is the same paste-to-link move I had used a year earlier on Coding Clarified, when I linked 643 already-imported students and orders by pasting the AAPC column into the link field. Back then it worked and I could not fully explain why. The mechanism is this: when you paste the full list of AAPCs into the link field, each pasted value finds the primary-field record with the exact same AAPC and links the two together. The AY Media version added the safeguard that makes it safe on messy data: make the primary field a formula so the paste physically cannot create a record.
+This is the same paste-to-link move I had used a year earlier on Client A, when I linked 643 already-imported students and orders by pasting the AAPC column into the link field. Back then it worked and I could not fully explain why. The mechanism is this: when you paste the full list of AAPCs into the link field, each pasted value finds the primary-field record with the exact same AAPC and links the two together. The Client B version added the safeguard that makes it safe on messy data: make the primary field a formula so the paste physically cannot create a record.
 
 ### Principle
 
@@ -164,9 +164,9 @@ The evolution was in how the key got built, not in the rule. When a single field
 
 **To move a field's data off a table you are about to delete, create a lookup of it on the surviving table, change the lookup's field type to plain text so the value freezes, then delete the source; and any link you keep only for migration provenance should be converted to text so it stops acting like a live relationship.**
 
-### Case study — AY Media, 2026-05-22
+### Case study — Client B, 2026-05-22
 
-AY Media had a Contract Line Item table and a separate Insertion Order table, and every line item produced exactly one insertion order. That is a persistent one-to-one, which meant 14,000 duplicate records carrying only lookup fields. I decided to delete the Insertion Order table. The problem: several fields the client actually used (artwork status, current stage, designer, editor) lived only on the insertion order, and deleting the table would delete them.
+Client B had a Contract Line Item table and a separate Insertion Order table, and every line item produced exactly one insertion order. That is a persistent one-to-one, which meant 14,000 duplicate records carrying only lookup fields. I decided to delete the Insertion Order table. The problem: several fields the client actually used (artwork status, current stage, designer, editor) lived only on the insertion order, and deleting the table would delete them.
 
 The method moves those fields down onto the surviving Line Item table without a script. It is a little inelegant, but it works. On the line item, create a lookup of each field you need to keep. A lookup is live, so at this point it is still reading from the insertion order. Then change each lookup's field type to single-line text, single-select (a field where you pick one option from a fixed list), or checkbox as appropriate. Changing the type ends the live connection and freezes whatever value the lookup was showing into a real, native field on the line item. Before this, the line item did not have those fields of its own; after it, it does.
 
