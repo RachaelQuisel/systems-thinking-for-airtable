@@ -33,7 +33,7 @@ If the rest of the course is about building the thing correctly, this module is 
 
 ### Case study
 
-AY Media (advertising; Airtable plus Fillout plus QuickBooks). The base had a Contract Line Item table and a separate Insertion Order table. Every line item produced exactly one insertion order. That is a permanent one-to-one relationship: 14,000 duplicate records carrying only lookup fields (fields that pull a value from a linked record), doubling the size of the base for no gain (2026-05-22).
+Client B (advertising; Airtable plus Fillout plus QuickBooks). The base had a Contract Line Item table and a separate Insertion Order table. Every line item produced exactly one insertion order. That is a permanent one-to-one relationship: 14,000 duplicate records carrying only lookup fields (fields that pull a value from a linked record), doubling the size of the base for no gain (2026-05-22).
 
 I had defended keeping the two tables separate. The client's reasons were real to them. Staff did not want to see or say the phrase "line item." And a few products get a line item but no insertion order. On 2026-06-08 I took those two reasons apart one at a time. Not to win. To be precise about the difference between a preference and a justification.
 
@@ -55,7 +55,7 @@ When a client gives you a reason, sort it into one of two piles. Pile one: this 
 
 ### Where it broke or changed
 
-The running example of this over the whole AY Media build was Fillout versus Site. There is a real case for building on Airtable Site or custom code once the logic gets complicated, because code is easier to change at that point. The client had chosen Fillout. I kept building on Fillout and said why. For that stretch of the build I had to go with what they were telling me, so I asked to build it on Fillout for now and make that the minimum viable version.
+The running example of this over the whole Client B build was Fillout versus Site. There is a real case for building on Airtable Site or custom code once the logic gets complicated, because code is easier to change at that point. The client had chosen Fillout. I kept building on Fillout and said why. For that stretch of the build I had to go with what they were telling me, so I asked to build it on Fillout for now and make that the minimum viable version.
 
 This is where I keep myself honest. "Always use Site" is over-generalized in the moment, and my pushback was specific, not just reluctance. On 2026-05-14 I said it plainly. Using Site would not have helped us avoid any of this, because they also want a dashboard. If they had not wanted a dashboard, and had only wanted the rule that you cannot select something already sold, that alone could have been built on Site. The dashboard is what changed the calculation.
 
@@ -69,7 +69,7 @@ The fair reframe on the other side is that you feel better prepared for any futu
 
 ### Case study
 
-Early AY Media, 2026-02-12. A "product" at this magazine is not a thing you pick off a list. It is a combination of attributes: publication, ad size, ad type, ad position, frequency, special section, issue month, and issue year. The client refused to let their account executives pick from a single product dropdown. They wanted to filter on nearly every attribute, and they add new products every couple of weeks.
+Early Client B, 2026-02-12. A "product" at this magazine is not a thing you pick off a list. It is a combination of attributes: publication, ad size, ad type, ad position, frequency, special section, issue month, and issue year. The client refused to let their account executives pick from a single product dropdown. They wanted to filter on nearly every attribute, and they add new products every couple of weeks.
 
 The simpler build is one product dropdown. The client did not ask for the simpler build. They asked to select attributes one at a time and have each choice narrow the next. So I built the harder thing. Each attribute got its own link-record table, a field that links a record to records in another table. I call each of those tables a library. The libraries cascade, meaning each selection filters the next. At the bottom sits a product link-record field with a dynamic filter, a filter that limits which records you can pick based on the other fields on the record. It shows only the product matching everything chosen above it.
 
@@ -95,7 +95,7 @@ The library model worked, but the attribute level moved as I learned the busines
 
 ### Case study: the reframe that overturned a morning of building
 
-AY Media inventory, 2026-05-14. We spent roughly ninety minutes building inventory keyed on product before the reframe landed. The premium print positions, inside front cover and page four, can each be sold once per issue. The thing I kept coming back to was that the sellable unit is not the product, it is the position. If there are twenty positions that can each be sold once a month, that is separate. It does not even need to be attached to the product.
+Client B inventory, 2026-05-14. We spent roughly ninety minutes building inventory keyed on product before the reframe landed. The premium print positions, inside front cover and page four, can each be sold once per issue. The thing I kept coming back to was that the sellable unit is not the product, it is the position. If there are twenty positions that can each be sold once a month, that is separate. It does not even need to be attached to the product.
 
 Said plainly: we are not selling products, we are selling positions. Once that is on the table, the model reorganizes around it. The issue slot is not per product, it is per position, which is where the instinct had started before we talked ourselves onto product.
 
@@ -105,7 +105,7 @@ That is the whole pattern in one stretch. Interrogate the model, defend the part
 
 ### Case study: keeping a decision that was mine against a stronger abstract argument
 
-The reason I trust this pattern is that I used it twice on the Coding Clarified build a year earlier and was right both times. Defending a decision out loud is not something you do only to clients. You do it to whoever is senior in the room.
+The reason I trust this pattern is that I used it twice on the Client A build a year earlier and was right both times. Defending a decision out loud is not something you do only to clients. You do it to whoever is senior in the room.
 
 **Search Orders, not Students.** The strict data-modeling instinct says AAPC is a student attribute, so "does this student exist?" should query the Students table. Think about it structurally. An AAPC value can never exist at the order level if it does not exist at the student level. So from a pure logic view you check the Students table, not the Orders table.
 
@@ -131,7 +131,7 @@ The product-versus-position reframe overturned close to ninety minutes of buildi
 
 ### Case study
 
-AY Media discount approvals, 2026-06-08. A sales rep proposes a discounted total and flags it for review. A manager sees it in a filtered interface and approves, rejects, or asks for one revision. If the manager asks for a revision, the rep can enter a revised figure. If the manager accepts that, it goes through. If not, it is rejected. That is the entire loop. One back-and-forth, maximum. Anything past that leaves the system.
+Client B discount approvals, 2026-06-08. A sales rep proposes a discounted total and flags it for review. A manager sees it in a filtered interface and approves, rejects, or asks for one revision. If the manager asks for a revision, the rep can enter a revised figure. If the manager accepts that, it goes through. If not, it is rejected. That is the entire loop. One back-and-forth, maximum. Anything past that leaves the system.
 
 We stored only two values: the proposed amount and the resulting amount. No negotiation history, no record of counteroffers. The resulting total is a single derived field. If a custom proposed value is present, show it; otherwise show the rolled-up line-item total, meaning a rollup that sums the line items (that override formula is Module 3). One field maps to the PDF.
 
@@ -159,7 +159,7 @@ The open question we never fully closed was the update mechanism. The straightfo
 
 ### Case study
 
-By 2026-05-14 the AY Media base was months into the client and me both editing it, and neither of us was fully sure what state it was in. My move in that situation is to rebuild the core in a blank base, not to ship, but to think. Take a blank base, start from "these are my products," and restructure with the latest knowledge. Not the final version. A mock, to get clarity back.
+By 2026-05-14 the Client B base was months into the client and me both editing it, and neither of us was fully sure what state it was in. My move in that situation is to rebuild the core in a blank base, not to ship, but to think. Take a blank base, start from "these are my products," and restructure with the latest knowledge. Not the final version. A mock, to get clarity back.
 
 Then the candid part, which I could say plainly to another builder in a way I almost never said it to the client. About a third of the tables, the client built, and they will not let me change anything they built. Then they went in and started deleting and changing the fields and data that I had. They had been doing this for about five months, which is a large part of why the build had taken as long as it had. That 2026-05-14 stretch was the first time in the whole engagement that I was the only one touching the base.
 
@@ -187,7 +187,7 @@ The client who edits the base underneath you is the same client who owns it afte
 
 ### Case study
 
-2025-08-28, Coding Clarified. I was being walked through a repeating-group automation. The explanation kept coming at the level of the concept. I already had the concept. What I did not have was the specific click, the place in the interface where the thing being described actually lived. The mismatch built for a few minutes until I said it plainly. I understand the concept; what I do not know how to do is where to find things. I get it, I literally just do not know what to click. It got to: I am losing my mind.
+2025-08-28, Client A. I was being walked through a repeating-group automation. The explanation kept coming at the level of the concept. I already had the concept. What I did not have was the specific click, the place in the interface where the thing being described actually lived. The mismatch built for a few minutes until I said it plainly. I understand the concept; what I do not know how to do is where to find things. I get it, I literally just do not know what to click. It got to: I am losing my mind.
 
 That is what it costs when the explanation and the need break apart far enough to hurt. It is in the course because of how it ended, not because it happened. Once the mismatch was named out loud, the explaining switched to the mechanics, and the tension resolved. The repair on the other side was one sentence, an acknowledgment that patience had run out for a minute. Not a big gesture. The correct size for the thing, and it closed it completely.
 
