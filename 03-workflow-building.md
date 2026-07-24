@@ -39,7 +39,7 @@ One of those destinations turned out to be a lookup. The incoming Fillout data h
 
 **A multi-record submission is built as a parent form (the contract, one record) with a child form nested inside it (the product line item, one record per product added); the child form is how a user adds more than one line item to a single contract.**
 
-### Case study — Client B, 2026-05-08 (call 665069340)
+### Case study — Client B, 2026-05-08
 
 Client B sells magazine advertising. A single contract has many line items, one per product an advertiser buys. The question was how one Fillout submission could create one contract record plus a variable number of line-item records linked to it.
 
@@ -77,7 +77,7 @@ And the larger change. This parent/child form produced a Fillout-generated PDF. 
 
 **Fillout generates every mapped PDF on every submission. It cannot conditionally branch its outputs. So when you need different documents for different cases, you duplicate the form once per case and select the right one with a single Airtable formula field, not with logic inside the tool.**
 
-### Case study — Client A, 2025-08-26 (call 390509922)
+### Case study — Client A, 2025-08-26
 
 Client A enrolls students in four states plus a headquarters default: Florida, Indiana, South Carolina, Texas, and HQ. Each state has its own enrollment agreement PDF. I wanted one enrollment form that would produce only the state-appropriate PDF.
 
@@ -105,7 +105,7 @@ That is the whole principle stated as a correction. The URL formula already capt
 
 **When users refuse a flat product dropdown, model the product as the combination of its attributes and build the form as a cascade where each attribute filters the next, ending in a product link-record field with a dynamic filter that matches everything chosen above it.**
 
-### Case study — Client B, 2026-02-12 (call 564364653) and 2026-05-08 (call 665069340)
+### Case study — Client B, 2026-02-12 and 2026-05-08
 
 Client B adds new products every couple of weeks, and the client would not accept picking a product from one long dropdown. A "product" there is really a combination: publication, ad size, ad type, ad position, frequency, issue month, issue year, special section.
 
@@ -137,7 +137,7 @@ Second, I later found redundant libraries. Ad Size ("half") and Ad Pages ("0.5")
 
 **A single Fillout submission that contains many rows (seven day-answers, a variable list) is sent both to Airtable and to a webhook automation; the automation waits a few seconds for the parent record to land, fetches it by matching submission ID, then creates one child record per row and links each back to the parent.**
 
-### Case study — Client A, 2025-07-29 (call 364852797)
+### Case study — Client A, 2025-07-29
 
 The weekly attendance form has one submission carrying seven day-answers: Monday attended, Tuesday attended, and so on. Each day needs to become its own record in the Attendance table. But the direct Fillout-to-Airtable integration writes one field per question into a single record. It cannot turn one submission into seven records in a different table.
 
@@ -167,7 +167,7 @@ The pattern worked well. It is one of the few from this era I would build the sa
 
 **An edit to an existing record is a different job from creating one, so you build a separate update form (often a single field), turn off Fillout's native edit-link email, and send your own email carrying the update form's dynamic URL, so you control who gets it and which form they land on.**
 
-### Case study — Client B, 2026-06-08 (call 700311737) and 2026-05-22 (call 682399168)
+### Case study — Client B, 2026-06-08 and 2026-05-22
 
 Two needs on Client B were both edits, not creations, and both wanted their own small form.
 
