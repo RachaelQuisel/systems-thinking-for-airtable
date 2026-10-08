@@ -1,14 +1,24 @@
-"""Build Module 1 prototype: 1080x1920 MP4, animated slide scenes, Kokoro TTS voiceover, burned-in captions.
-Run with the tts-venv python:  src/tts-venv/bin/python src/build_module01.py
+"""Build Module 1: 1080x1920 MP4, animated slide scenes, British Kokoro TTS voiceover at 1.3x, burned-in captions.
+v3: voice-align text from read-aloud-scripts.md, voice bf_emma, TTS generated at speed 1.3 (pauses and fades scaled to match).
+Run with the tts-venv python:
+  src/tts-venv/bin/python src/build_module01.py                                   # full render -> module-01.mp4
+  src/tts-venv/bin/python src/build_module01.py --voice bf_alice --seconds 10 --out voice-samples/x.mp4 --work m1_bf_alice
 """
-import subprocess, pathlib, json, re, math
+import subprocess, pathlib, json, re, math, argparse
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent  # this folder (content/module-videos)
-SRC = ROOT / 'src'; WORK = SRC / 'm1'; WORK.mkdir(exist_ok=True)
+ap = argparse.ArgumentParser()
+ap.add_argument('--voice', default='bf_emma'); ap.add_argument('--speed', type=float, default=1.3)
+ap.add_argument('--seconds', type=float, default=0); ap.add_argument('--out', default='module-01.mp4')
+ap.add_argument('--work', default='m1v3'); ap.add_argument('--no-poster', action='store_true')
+ARGS = ap.parse_args()
+SRC = ROOT / 'src'; WORK = SRC / ARGS.work; WORK.mkdir(exist_ok=True)
 W, H, FPS = 1080, 1920, 30
-VOICE, SPEED = 'af_heart', 1.0
+VOICE, SPEED = ARGS.voice, ARGS.speed
+LANG = 'en-gb' if VOICE[:1] == 'b' else 'en-us'
+PACE = 1.0 / SPEED   # scale lead/tail pauses and fades so the whole video plays at the faster pace
 
 AQUA, DEEP, INK, CREAM, SAND, RED = '#286575', '#1D4E5B', '#202B33', '#FBF8F3', '#F3D9A4', '#B5483B'
 
@@ -60,56 +70,56 @@ def tbl(name, fields):
 
 # Each scene: vo text, body class, html (elements with class s1..sK reveal in order), reveal word indexes
 SCENES = [
- dict(vo="Three table decisions I got wrong. A total that read zero. A customer ID printed three times on one contract. About fourteen thousand duplicate rows.",
-      cls='dark', reveal=[0, 6, 11, 20],
+ dict(vo="On a magazine advertising build, I got three table decisions wrong. A contract total read zero. A QuickBooks customer ID printed three times on one contract. About fourteen thousand duplicate rows appeared.",
+      cls='dark', reveal=[0, 11, 16, 26],
       html=lambda: f'''<div class="wrap"><div class="eyebrow">Systems Thinking for Airtable · 01</div>
 <h2 class="s1">Three table decisions I got wrong.</h2>
 <div class="sym s2"><span class="x">1</span>Total = $0</div>
 <div class="sym s3"><span class="x">2</span>QuickBooks ID ×3</div>
 <div class="sym s4"><span class="x">3</span>~14,000 duplicate rows</div></div>{foot(1)}'''),
- dict(vo="None of those were automation bugs. They were schema decisions I made too early and had to take back. This was a magazine advertising build in Airtable.",
-      cls='', reveal=[0, 6, 18],
+ dict(vo="None of those were automation bugs. They were decisions about my tables and links. I made them too early and had to take them back.",
+      cls='', reveal=[0, 6, 14],
       html=lambda: f'''<div class="bar"></div><div class="wrap"><div class="eyebrow">What they had in common</div>
 <h1 class="s1">Not automation bugs.</h1>
-<div class="sub s2"><b class="aqua">Schema decisions</b> I made too early and had to take back.</div>
-<div class="s3" style="margin-top:56px"><span class="pill">Magazine advertising · Airtable + Fillout + QuickBooks</span></div></div>{foot(2)}'''),
- dict(vo="Here's the rule I use now. Every value has one level where it's actually true.",
-      cls='', reveal=[0, 6],
-      html=lambda: f'''<div class="bar"></div><div class="wrap"><div class="eyebrow s1">The rule I use now</div>
-<h1 class="s2">Every value has <span class="aqua">one level</span> where it's actually true.</h1></div>{foot(3)}'''),
- dict(vo="The line total lives on the line item, where quantity and unit cost live. The contract just adds up the lines.",
+<div class="sub s2"><b class="aqua">Decisions about my tables and links.</b></div>
+<div class="sub s3" style="margin-top:28px">Made too early. Taken back.</div></div>{foot(2)}'''),
+ dict(vo="Every value has one level where it is actually true.",
+      cls='', reveal=[0, 1],
+      html=lambda: f'''<div class="bar"></div><div class="wrap"><div class="eyebrow s1">The rule</div>
+<h1 class="s2">Every value has <span class="aqua">one level</span> where it is actually true.</h1></div>{foot(3)}'''),
+ dict(vo="The line total belongs on the line item, with the quantity and unit cost. The contract adds up the line totals.",
       cls='', reveal=[0, 1, 14],
       html=lambda: f'''<div class="bar"></div><div class="wrap"><div class="eyebrow">Example 1 · the total that read zero</div>
 <div class="s3">{tbl('Contracts', [('Contract Total', 'SUM(Line Total)', 'hl')])}</div>
 <div class="arrow s3">↑ rolls up</div>
 <div class="s1">{tbl('Contract Line Items', [('Quantity', 'number', ''), ('Per Unit Cost', 'currency', ''), ('Line Total', 'Quantity × Per Unit Cost', 'hl s2')])}</div></div>{foot(4)}'''),
- dict(vo="The QuickBooks customer ID lives on the advertiser, because QuickBooks assigns one ID to the customer, not to each contact.",
-      cls='', reveal=[0, 3, 10],
+ dict(vo="The QuickBooks customer ID belongs on the advertiser. QuickBooks assigns it to the customer, not each contact.",
+      cls='', reveal=[0, 4, 8],
       html=lambda: f'''<div class="bar"></div><div class="wrap compact"><div class="eyebrow">Example 2 · the ID printed 3×</div>
 <div class="s2">{tbl('Advertisers', [('QuickBooks Customer ID', '✓ one value', 'hl')])}</div>
 <div class="arrow s2">↓ has many</div>
 <div class="s1">{tbl('Contacts', [('Contact 1 · QB ID', 'same ID', 'bad'), ('Contact 2 · QB ID', 'same ID', 'bad'), ('Contact 3 · QB ID', 'same ID', 'bad')])}</div>
 <div class="s3" style="margin-top:30px;text-align:center"><span class="pill">Store it where QuickBooks assigns it</span></div></div>{foot(5)}'''),
- dict(vo="Store a value one level too high, and it can't compute. One level too low, and you get duplicates.",
-      cls='', reveal=[0, 1, 11],
+ dict(vo="A value one level too high cannot be calculated. A value one level too low creates duplicates.",
+      cls='', reveal=[0, 2, 9],
       html=lambda: f'''<div class="bar"></div><div class="wrap"><div class="eyebrow">How to spot it</div>
 <h2 class="s1">Where a value lives decides what breaks.</h2>
-<div class="lad"><div class="card s2"><b>Too high</b><span>can't compute · total = $0</span></div>
+<div class="lad"><div class="card s2"><b>Too high</b><span>can't be calculated · total = $0</span></div>
 <div class="card ok s1"><b>Right level</b><span>one true value</span></div>
 <div class="card s3"><b>Too low</b><span>duplicates · ID ×3</span></div></div></div>{foot(6)}'''),
- dict(vo="And when two tables are one-to-one, with no concrete reason to split them, it's the same table twice. So I deleted one.",
-      cls='', reveal=[0, 2, 18],
+ dict(vo="My second table matched the first, record for record. It held the duplicates. Nothing required it. So I deleted it.",
+      cls='', reveal=[0, 9, 13],
       html=lambda: f'''<div class="bar"></div><div class="wrap compact"><div class="eyebrow">Example 3 · the 14,000 rows</div>
 <div class="s1">{tbl('Contracts', [])}</div><div class="arrow s1">↓</div>
 <div class="s1">{tbl('Contract Line Items', [])}</div><div class="arrow s2">↓ 1 : 1</div>
 <div class="s2"><div class="s3wrap">{tbl('Insertion Orders', [('~14,000 rows', 'lookup fields only', 'bad')])}</div></div>
-<div class="s3" style="margin-top:30px;text-align:center"><span class="pill">No concrete reason to split → same table twice → deleted</span></div></div>{foot(7)}'''),
- dict(vo="Before you build a single field, draw the model on one screen, and mark the level where each value is first singular. That's module one of my course, Systems Thinking for Airtable.",
-      cls='dark', reveal=[0, 12, 22],
+<div class="s3" style="margin-top:30px;text-align:center"><span class="pill">Matched record for record → nothing&nbsp;required&nbsp;it → deleted</span></div></div>{foot(7)}'''),
+ dict(vo="Now I draw the whole model on one screen first. I mark where each value first has one answer. This is module one of Systems Thinking for Airtable.",
+      cls='dark', reveal=[0, 10, 19],
       html=lambda: f'''<div class="wrap"><div class="eyebrow">What I'd do differently now</div>
-<h1 class="s1">Draw the model on one screen.</h1>
-<div class="sub s2">Mark the level where each value is first singular.</div>
-<div class="s3" style="margin-top:70px"><div class="card"><div style="font-family:Manrope;font-weight:800;font-size:46px">Systems Thinking for Airtable</div>
+<h1 class="s1">Draw the whole model on one screen.</h1>
+<div class="sub s2">Mark where each value first has one answer.</div>
+<div class="s3" style="margin-top:44px"><div class="card"><div style="font-family:Manrope;font-weight:800;font-size:46px">Systems Thinking for Airtable</div>
 <div style="font-size:36px;margin-top:10px;color:{SAND}">Module 1 · Schema Design · on GitHub</div></div></div></div>
 {foot(8)}'''),
 ]
@@ -168,8 +178,8 @@ def tts():
     k = Kokoro(str(SRC / 'models/kokoro-v1.0.onnx'), str(SRC / 'models/voices-v1.0.bin'))
     clips = []
     for si, sc in enumerate(SCENES, 1):
-        s, sr = k.create(sc['vo'], voice=VOICE, speed=SPEED, lang='en-us')
-        s = compress_silence(np.asarray(s, dtype=np.float32), sr)
+        s, sr = k.create(sc['vo'], voice=VOICE, speed=SPEED, lang=LANG)
+        s = compress_silence(np.asarray(s, dtype=np.float32), sr, max_gap=0.32 * PACE, keep=0.26 * PACE)
         sf.write(WORK / f'vo{si:02d}.wav', s, sr)
         clips.append((s, sr))
     return clips
@@ -182,24 +192,61 @@ CAP_TOP = 1180                   # ~61% of frame height; box bottom stays above 
 def text_w(t):
     l, _, r, _ = ImageDraw.Draw(Image.new('RGBA', (1, 1))).textbbox((0, 0), t, font=CAP_FONT); return r - l
 
+KEEP = ['Systems Thinking for Airtable', 'QuickBooks customer ID', 'magazine advertising build', 'fourteen thousand',
+        'duplicate rows', 'line item', 'line totals', 'line total', 'unit cost', 'one level', 'too high', 'too low',
+        'record for record', 'one screen', 'one answer', 'module one', 'table decisions', 'tables and links', 'adds up', 'too early']
+WEAK = {'a', 'an', 'the', 'of', 'to', 'and', 'on', 'in', 'for', 'with', 'I', 'my'}
+
+def _bad_breaks(words):
+    """Indexes k where breaking before words[k] would split a protected phrase."""
+    bad = set(); low = [w.strip('.,?').lower() for w in words]
+    for ph in KEEP:
+        pw = ph.lower().split()
+        for i in range(len(words) - len(pw) + 1):
+            if low[i:i + len(pw)] == pw: bad.update(range(i + 1, i + len(pw)))
+    return bad
+
+def _break_cost(words, k, bad, hard=1000):
+    c = 0.0
+    if k in bad: c += hard
+    if k == 1 or k == len(words) - 1: c += 150         # avoid one-word orphans
+    if words[k - 1].endswith(','): c -= 40
+    if words[k - 1].strip('.,?') in WEAK: c += 60
+    return c
+
+def split2(g):
+    if text_w(' '.join(g)) <= CAP_MAXW: return [g], 0.0
+    bad = _bad_breaks(g); best = None
+    for k in range(1, len(g)):
+        a, b = ' '.join(g[:k]), ' '.join(g[k:])
+        if text_w(a) > CAP_MAXW or text_w(b) > CAP_MAXW: continue
+        cost = abs(text_w(a) - text_w(b)) / 10 + _break_cost(g, k, bad, hard=100)
+        if best is None or cost < best[0]: best = (cost, k)
+    if best is None: return None
+    return [g[:best[1]], g[best[1]:]], best[0]
+
 def chunks(text):
-    """Caption cards: split per sentence, balance words across cards (max 2 lines each), balance the two lines."""
-    import re as _re
+    """Caption cards: per sentence, fewest cards that fit (max 2 lines each); choose break points that keep
+    names and phrases together, prefer commas, avoid ending on a weak word, and balance card lengths."""
+    import re as _re, itertools
     sents = [x.split() for x in _re.split(r'(?<=[.?])\s+', text.strip()) if x]
     cards = []
-    def split2(g):
-        if text_w(' '.join(g)) <= CAP_MAXW: return [g]
-        k = min(range(1, len(g)), key=lambda k: max(text_w(' '.join(g[:k])), text_w(' '.join(g[k:]))))
-        return [g[:k], g[k:]]
     for sw in sents:
-        tot = sum(len(w) + 1 for w in sw)
-        for nc in range(1, len(sw) + 1):
-            groups = [[] for _ in range(nc)]; acc = 0
-            for w in sw:
-                gi = min(nc - 1, int(acc / tot * nc)); groups[gi].append(w); acc += len(w) + 1
-            res = [split2(g) for g in groups if g]
-            if all(text_w(' '.join(l)) <= CAP_MAXW for c in res for l in c): break
-        cards += res
+        n = len(sw); bad = _bad_breaks(sw); done = None
+        for nc in range(1, n + 1):
+            best = None
+            for cuts in itertools.combinations(range(1, n), nc - 1):
+                bounds = (0,) + cuts + (n,)
+                groups = [sw[bounds[i]:bounds[i + 1]] for i in range(nc)]
+                sp = [split2(g) for g in groups]
+                if any(r is None for r in sp): continue
+                res = [r[0] for r in sp]
+                lens = [len(' '.join(g)) for g in groups]
+                cost = (max(lens) - min(lens)) * 1.5 + sum(_break_cost(sw, k, bad) for k in cuts) + sum(r[1] for r in sp)
+                if best is None or cost < best[0]: best = (cost, res)
+            if best is not None and best[0] < 900:
+                done = best[1]; break
+        cards += done
     return cards
 
 def caption_img(lines):
@@ -219,7 +266,7 @@ def main():
     states = render_states()
     clips = tts()
     sr = clips[0][1]
-    LEAD, TAIL = 0.18, 0.40
+    LEAD, TAIL = 0.18 * PACE, 0.40 * PACE
     timeline = []; t = 0.0; audio = []
     for sc, (s, _) in zip(SCENES, clips):
         sp = len(s) / sr; dur = LEAD + sp + TAIL
@@ -241,7 +288,7 @@ def main():
         i0 = 0
         for card in chunks(sc['vo']):
             n = sum(len(l) for l in card)
-            caps.append(dict(a=wtime(i0), b=min(wtime(i0 + n) + 0.25, tl['start'] + tl['dur'] - 0.16), img=caption_img(card), text=' / '.join(' '.join(l) for l in card)))
+            caps.append(dict(a=wtime(i0), b=min(wtime(i0 + n) + 0.25 * PACE, tl['start'] + tl['dur'] - 0.16 * PACE), img=caption_img(card), text=' / '.join(' '.join(l) for l in card)))
             i0 += n
     # one caption at a time: each ends no later than the next one starts (hard cuts, no crossfade)
     for c, nxt in zip(caps, caps[1:]):
@@ -251,11 +298,12 @@ def main():
 
     imgs = [[Image.open(p).convert('RGB') for p in st] for st in states]
     bgs = [Image.new('RGB', (W, H), DEEP if sc['cls'] == 'dark' else CREAM) for sc in SCENES]
-    out = ROOT / 'module-01.mp4'
+    out = ROOT / ARGS.out; out.parent.mkdir(parents=True, exist_ok=True)
+    clip = min(total, ARGS.seconds) if ARGS.seconds else total
     ff = subprocess.Popen(['ffmpeg', '-y', '-loglevel', 'error', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', f'{W}x{H}', '-r', str(FPS), '-i', '-',
                            '-i', str(WORK / 'voiceover.wav'), '-c:v', 'libx264', '-preset', 'medium', '-crf', '20', '-pix_fmt', 'yuv420p',
-                           '-c:a', 'aac', '-b:a', '160k', '-shortest', '-movflags', '+faststart', str(out)], stdin=subprocess.PIPE)
-    XF, DIP = 0.35, 0.16  # element reveal fade; scene fade-out then fade-in (dip to the scene's own background)
+                           '-c:a', 'aac', '-b:a', '160k', '-t', f'{clip:.3f}', '-shortest', '-movflags', '+faststart', str(out)], stdin=subprocess.PIPE)
+    XF, DIP = 0.35 * PACE, 0.16 * PACE  # element reveal fade; scene fade-out then fade-in (dip to the scene's own background)
     def scene_frame(si, tt):
         tl = timeline[si]; rv = reveals[si]; st = imgs[si]
         k = 0
@@ -275,7 +323,7 @@ def main():
         elif si < len(timeline) - 1 and left < DIP:
             cur = Image.blend(bgs[si], cur, max(0.0, left / DIP))
         return cur
-    nframes = int(math.ceil(total * FPS))
+    nframes = int(math.ceil(clip * FPS))
     for fi in range(nframes):
         tt = fi / FPS
         si = max(i for i, tl in enumerate(timeline) if tt >= tl['start'] - 1e-9)
@@ -286,7 +334,7 @@ def main():
             fr.alpha_composite(im, ((W - im.width) // 2, CAP_TOP))
         ff.stdin.write(fr.convert('RGB').tobytes())
     ff.stdin.close(); ff.wait()
-    imgs[0][-1].save(ROOT / 'module-01-poster.png')
+    if not ARGS.no_poster: imgs[0][-1].save(ROOT / 'module-01-poster.png')
     print('wrote', out)
 
 if __name__ == '__main__':
