@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Teleprompter · Rachael Quisel</title>
+<style>
+  :root {
+    --cream: #FBF8F3; --aqua: #1D4E5B; --accent: #286575; --sand: #F3D9A4;
+    --bg: var(--aqua); --fg: var(--cream); --label: var(--sand);
+    --band: rgba(243, 217, 164, 0.20); --bandEdge: var(--sand);
+    --barBg: rgba(16, 52, 62, 0.96); --barFg: var(--cream); --ctl: rgba(251, 248, 243, 0.12);
+    --font: 44px; --measure: 34ch; --readY: 260px; --lh: 1.5;
+  }
+  body.light {
+    --bg: var(--cream); --fg: var(--aqua); --label: var(--accent);
+    --band: var(--sand); --bandEdge: #d9b56c;
+    --barBg: rgba(29, 78, 91, 0.97); --barFg: var(--cream);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", Arial, sans-serif; }
+  button, select, input, textarea { font: inherit; }
+
+  /* ---------- control bar ---------- */
+  #bar { position: fixed; top: 0; left: 0; right: 0; z-index: 20; background: var(--barBg); color: var(--barFg);
+    padding: 8px 12px; display: flex; flex-direction: column; gap: 6px; font-size: 14px;
+    transition: opacity .35s; box-shadow: 0 2px 10px rgba(0,0,0,.25); }
+  body.playing #bar { opacity: .08; }
+  body.playing #bar:hover { opacity: 1; }
+  .row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+  #bar select { background: var(--cream); color: var(--aqua); border: 0; border-radius: 6px; padding: 5px 8px;
+    max-width: 100%; min-width: 0; flex: 1 1 260px; font-weight: 600; }
+  #bar button { background: var(--ctl); color: var(--barFg); border: 1px solid rgba(251,248,243,.25);
+    border-radius: 6px; padding: 5px 10px; cursor: pointer; line-height: 1.2; white-space: nowrap; }
+  #bar button:hover { background: rgba(251,248,243,.22); }
+  #bar button.on { background: var(--sand); color: var(--aqua); border-color: var(--sand); }
+  #bar button.primary { background: var(--sand); color: var(--aqua); font-weight: 700; min-width: 86px; border-color: var(--sand); }
+  #bar label { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+  #bar input[type=range] { width: 120px; accent-color: var(--sand); }
+  .val { font-variant-numeric: tabular-nums; min-width: 2.2em; display: inline-block; text-align: center; font-weight: 700; }
+  #info { opacity: .85; font-variant-numeric: tabular-nums; }
+  .keys { opacity: .7; font-size: 12px; }
+  kbd { border: 1px solid rgba(251,248,243,.4); border-radius: 4px; padding: 0 4px; font-size: 11px; font-family: inherit; }
+
+  /* ---------- stage ---------- */
+  #stage { position: fixed; inset: 0; overflow: hidden; }
+  #viewport { position: absolute; inset: 0; z-index: 2; }
+  body.mirror #viewport { transform: scaleX(-1); }
+  #text { position: absolute; left: 0; right: 0; top: 0; will-change: transform;
+    font-size: var(--font); line-height: var(--lh); font-weight: 600; padding: 0 24px; }
+  #text .inner { max-width: var(--measure); margin: 0 auto; }
+  #text h1 { font-size: .5em; line-height: 1.4; margin: 0 0 .9em; text-transform: uppercase; letter-spacing: .12em;
+    color: var(--label); font-weight: 800; }
+  #text .scene { margin: 0 0 1.1em; }
+  #text .label { display: block; font-size: .36em; line-height: 1.6; text-transform: uppercase; letter-spacing: .16em;
+    color: var(--label); font-weight: 800; margin-bottom: .25em; }
+  #text p { margin: 0; }
+  #text .end { font-size: .4em; text-transform: uppercase; letter-spacing: .2em; color: var(--label); padding: 1em 0 60vh; }
+  #band { position: absolute; left: 0; right: 0; z-index: 1; pointer-events: none;
+    top: calc(var(--readY) - var(--font) * var(--lh) / 2); height: calc(var(--font) * var(--lh));
+    background: var(--band); border-top: 2px solid var(--bandEdge); border-bottom: 2px solid var(--bandEdge); }
+  #band::before, #band::after { content: ""; position: absolute; top: 50%; transform: translateY(-50%);
+    border: 12px solid transparent; }
+  #band::before { left: 4px; border-left-color: var(--bandEdge); }
+  #band::after { right: 4px; border-right-color: var(--bandEdge); }
+  #fade { position: absolute; left: 0; right: 0; top: 0; height: calc(var(--readY) - var(--font) * var(--lh) / 2);
+    background: linear-gradient(to bottom, var(--bg) 25%, transparent); opacity: .7; z-index: 3; pointer-events: none; }
+  #progress { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: rgba(243,217,164,.18); z-index: 4; }
+  #progress div { height: 100%; width: 0; background: var(--sand); }
+  #count { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; z-index: 30;
+    font-size: 30vmin; font-weight: 800; color: var(--sand); background: rgba(16,52,62,.55); pointer-events: none; }
+  #count.show { display: flex; }
+  #toast { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 40; background: var(--sand);
+    color: var(--aqua); padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; opacity: 0;
+    transition: opacity .25s; pointer-events: none; }
+  #toast.show { opacity: 1; }
+
+  /* ---------- paste panel ---------- */
+  #paste { position: fixed; inset: 0; z-index: 50; background: rgba(10,30,36,.75); display: none;
+    align-items: center; justify-content: center; padding: 16px; }
+  #paste.show { display: flex; }
+  #paste .box { background: var(--cream); color: var(--aqua); border-radius: 10px; padding: 16px; width: min(760px, 100%);
+    max-height: 100%; display: flex; flex-direction: column; gap: 10px; }
+  #paste h2 { margin: 0; font-size: 18px; }
+  #paste p { margin: 0; font-size: 13px; opacity: .8; }
+  #paste textarea { width: 100%; min-height: 260px; flex: 1; border: 2px solid var(--accent); border-radius: 8px;
+    padding: 10px; font-size: 15px; line-height: 1.45; color: var(--aqua); background: #fff; resize: vertical; }
+  #paste .actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+  #paste button { border-radius: 6px; padding: 7px 14px; border: 1px solid var(--accent); background: #fff;
+    color: var(--aqua); cursor: pointer; font-weight: 600; }
+  #paste button.primary { background: var(--aqua); color: var(--cream); border-color: var(--aqua); }
+
+  /* ---------- compact mode ---------- */
+  body.compact #bar { padding: 6px 8px; font-size: 13px; }
+  body.compact .full-only { display: none !important; }
+  body.compact #bar select { flex-basis: 100%; }
+  body.compact #bar button { padding: 4px 8px; }
+  body.compact #bar button.primary { min-width: 64px; }
+  body.compact #text { padding: 0 14px; }
+  body.compact.more .full-only { display: flex !important; }
+  body:not(.compact) .compact-only { display: none !important; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="band"></div>
+  <div id="viewport"><div id="text"><div class="inner" id="inner"></div></div></div>
+  <div id="fade"></div>
+  <div id="progress"><div id="progbar"></div></div>
+  <div id="count"></div>
+</div>
+
+<div id="bar">
+  <div class="row">
+    <select id="pick" title="Choose a script"></select>
+    <button id="pasteBtn" class="full-only" tabindex="-1" title="Paste any other script">Paste script</button>
+  </div>
+  <div class="row">
+    <button id="playBtn" class="primary" tabindex="-1" title="Play / pause (Space)">Play</button>
+    <button id="restartBtn" tabindex="-1" title="Restart (R)">&#8634; Restart</button>
+    <button id="backBtn" tabindex="-1" title="Nudge back (Left arrow)">&#9664;</button>
+    <button id="fwdBtn" tabindex="-1" title="Nudge forward (Right arrow)">&#9654;</button>
+    <span>Speed</span>
+    <button id="slowBtn" tabindex="-1" title="Slower (Down arrow)">&minus;</button>
+    <span class="val" id="speedVal">13</span>
+    <button id="fastBtn" tabindex="-1" title="Faster (Up arrow)">+</button>
+    <button id="mirrorBtn" class="full-only" tabindex="-1" title="Mirror text (M)">Mirror</button>
+    <button id="fullBtn" class="full-only" tabindex="-1" title="Fullscreen (F)">Fullscreen</button>
+    <button id="compactBtn" tabindex="-1" title="Compact mode for a narrow window by your webcam (C)">Compact</button>
+    <button id="moreBtn" class="compact-only" tabindex="-1" title="Show all settings">&#9881;</button>
+  </div>
+  <div class="row full-only">
+    <label>Text size <input type="range" id="fontR" min="20" max="110" step="1"><span class="val" id="fontVal"></span></label>
+    <label>Line width <input type="range" id="widthR" min="14" max="80" step="1"><span class="val" id="widthVal"></span></label>
+    <label>Countdown
+      <select id="cdSel" style="flex:0 0 auto">
+        <option value="top">from the top</option>
+        <option value="every">every play</option>
+        <option value="off">off</option>
+      </select></label>
+    <button id="themeBtn" tabindex="-1" title="Switch dark / light">Light</button>
+    <button id="windowBtn" tabindex="-1" title="Open a narrow compact window to put next to your webcam">Open compact window</button>
+  </div>
+  <div class="row">
+    <span id="info"></span>
+    <span class="keys full-only"><kbd>Space</kbd> play/pause &nbsp;<kbd>&uarr;</kbd><kbd>&darr;</kbd> speed &nbsp;<kbd>&larr;</kbd><kbd>&rarr;</kbd> nudge &nbsp;<kbd>R</kbd> restart &nbsp;<kbd>F</kbd> fullscreen &nbsp;<kbd>M</kbd> mirror &nbsp;<kbd>C</kbd> compact</span>
+  </div>
+</div>
+
+<div id="paste">
+  <div class="box">
+    <h2>Paste a script</h2>
+    <p>Leave a blank line between paragraphs. A line that starts with # becomes a small label (for example "# Hook" or "# Scene 2"). It stays saved in this browser.</p>
+    <textarea id="pasteText" placeholder="# Hook&#10;Your first line here.&#10;&#10;# Scene 2&#10;Next paragraph..."></textarea>
+    <div class="actions">
+      <button id="pasteClear">Clear</button>
+      <button id="pasteCancel">Cancel</button>
+      <button id="pasteUse" class="primary">Use this script</button>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+(function () {
+  "use strict";
+  var MODULES = /*__SCRIPTS__*/[];
+  var KEY = "rq-teleprompter-v1";
+  var $ = function (id) { return document.getElementById(id); };
+
+  // ---------- settings ----------
+  var defaults = {
+    script: MODULES.length ? MODULES[0].id : "paste",
+    speed: 13, mirror: false, light: false, countdown: "top", paste: "", compactOn: false,
+    normal: { font: 52, width: 34 }, compact: { font: 30, width: 40 }
+  };
+  var S = load();
+  function load() {
+    var s = JSON.parse(JSON.stringify(defaults));
+    try {
+      var raw = window.localStorage.getItem(KEY);
+      if (raw) {
+        var o = JSON.parse(raw);
+        for (var k in o) if (Object.prototype.hasOwnProperty.call(s, k)) s[k] = o[k];
+      }
+    } catch (e) { /* storage blocked: use defaults */ }
+    return s;
+  }
+  var saveTimer = null;
+  function save() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function () {
+      try { window.localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {}
+    }, 200);
+  }
+
+  var compact = /compact/.test(location.hash) || !!S.compactOn;
+  function mode() { return compact ? S.compact : S.normal; }
+
+  // ---------- state ----------
+  var offset = 0, maxOffset = 0, playing = false, last = 0, words = 0, lineH = 60, readY = 200;
+  var counting = false, cdTimer = null;
+
+  // ---------- script rendering ----------
+  function esc(t) { return t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function parsePaste(txt) {
+    var scenes = [], label = "";
+    txt.replace(/\r/g, "").split(/\n\s*\n/).forEach(function (block) {
+      var lines = block.split("\n"), body = [];
+      lines.forEach(function (ln) {
+        if (/^\s*#/.test(ln)) {
+          if (body.length) { scenes.push({ label: label, text: body.join(" ") }); body = []; }
+          label = ln.replace(/^\s*#+\s*/, "").trim();
+        } else if (ln.trim()) body.push(ln.trim());
+      });
+      if (body.length) { scenes.push({ label: label, text: body.join(" ") }); label = ""; }
+    });
+    return { id: "paste", title: "Your pasted script", scenes: scenes };
+  }
+  function current() {
+    if (S.script === "paste") return parsePaste(S.paste || "");
+    for (var i = 0; i < MODULES.length; i++) if (MODULES[i].id === S.script) return MODULES[i];
+    return MODULES[0];
+  }
+  function render() {
+    var m = current(), h = "<h1>" + esc(m.title) + "</h1>";
+    words = 0;
+    if (!m.scenes.length) h += '<div class="scene"><p>Nothing here yet. Click "Paste script" to add one.</p></div>';
+    m.scenes.forEach(function (s) {
+      words += s.text.split(/\s+/).filter(Boolean).length;
+      h += '<div class="scene">' + (s.label ? '<span class="label">' + esc(s.label) + "</span>" : "") +
+           "<p>" + esc(s.text) + "</p></div>";
+    });
+    h += '<div class="end">End of script</div>';
+    $("inner").innerHTML = h;
+    offset = 0;
+    layout(0);
+  }
+  function fillPicker() {
+    var p = $("pick"), h = "";
+    MODULES.forEach(function (m, i) {
+      h += '<option value="' + m.id + '">' + esc(m.title.replace(/^Module (\d+):/, "M$1 ·")) + "</option>";
+    });
+    h += '<option value="paste">Pasted script' + (S.paste ? "" : " (empty)") + "</option>";
+    p.innerHTML = h;
+    p.value = S.script;
+    if (p.value !== S.script) { S.script = MODULES[0].id; p.value = S.script; }
+  }
+
+  // ---------- layout + scrolling ----------
+  function layout(keepFrac) {
+    var md = mode();
+    var root = document.documentElement.style;
+    root.setProperty("--font", md.font + "px");
+    root.setProperty("--measure", md.width + "ch");
+    lineH = md.font * 1.5;
+    var H = window.innerHeight, barH = $("bar").offsetHeight;
+    readY = Math.round(Math.max(H / 3, barH + lineH * 0.75));
+    root.setProperty("--readY", readY + "px");
+    var endEl = $("inner").querySelector(".end");
+    var textH = endEl ? endEl.offsetTop : $("text").offsetHeight;
+    maxOffset = Math.max(0, textH - lineH);
+    if (keepFrac !== undefined && keepFrac !== null) offset = keepFrac * maxOffset;
+    clamp(); paint(); updateUI();
+  }
+  function frac() { return maxOffset ? offset / maxOffset : 0; }
+  function clamp() { if (offset < 0) offset = 0; if (offset > maxOffset) offset = maxOffset; }
+  function pxPerSec() { return S.speed * mode().font * 0.06; }
+  function paint() {
+    $("text").style.transform = "translate3d(0," + (readY - lineH / 2 - offset).toFixed(2) + "px,0)";
+    $("progbar").style.width = (frac() * 100).toFixed(2) + "%";
+  }
+  function fmt(sec) { sec = Math.max(0, Math.round(sec)); return Math.floor(sec / 60) + ":" + ("0" + sec % 60).slice(-2); }
+  function updateInfo() {
+    var pps = pxPerSec(), total = maxOffset / pps, left = (maxOffset - offset) / pps;
+    var lines = Math.max(1, maxOffset / lineH), wpm = Math.round(words / lines * (pps / lineH) * 60);
+    $("info").textContent = words + " words · about " + wpm + " wpm · " + fmt(left) + " left of " + fmt(total);
+  }
+  function tick(ts) {
+    if (!playing) return;
+    var dt = last ? Math.min(0.1, (ts - last) / 1000) : 0;
+    last = ts;
+    offset += pxPerSec() * dt;
+    if (offset >= maxOffset) { offset = maxOffset; paint(); pause(); toast("End of script"); return; }
+    paint();
+    if (Math.floor(ts / 250) !== Math.floor((ts - dt * 1000) / 250)) updateInfo();
+    requestAnimationFrame(tick);
+  }
+  function start() {
+    playing = true; last = 0; document.body.classList.add("playing");
+    updateUI(); requestAnimationFrame(tick);
+  }
+  function play() {
+    if (playing || counting) return;
+    if (offset >= maxOffset) offset = 0;
+    var cd = S.countdown === "every" || (S.countdown === "top" && offset < 1);
+    if (!cd) { start(); return; }
+    counting = true; updateUI();
+    var n = 3, el = $("count");
+    el.textContent = n; el.classList.add("show");
+    cdTimer = setInterval(function () {
+      n--;
+      if (n > 0) { el.textContent = n; return; }
+      clearInterval(cdTimer); el.classList.remove("show"); counting = false; start();
+    }, 1000);
+  }
+  function cancelCountdown() {
+    clearInterval(cdTimer); counting = false; $("count").classList.remove("show");
+  }
+  function pause() {
+    cancelCountdown();
+    playing = false; document.body.classList.remove("playing"); updateUI();
+  }
+  function toggle() { (playing || counting) ? pause() : play(); }
+  function restart() { pause(); offset = 0; paint(); updateUI(); toast("Back to the top"); }
+  function nudge(dir) { offset += dir * lineH; clamp(); paint(); updateInfo(); }
+  function speed(d) {
+    S.speed = Math.min(40, Math.max(1, S.speed + d)); save(); updateUI(); toast("Speed " + S.speed);
+  }
+  function setMirror(v) { S.mirror = v; document.body.classList.toggle("mirror", v); save(); updateUI(); }
+  function setTheme(light) { S.light = light; document.body.classList.toggle("light", light); save(); updateUI(); }
+  function setCompact(v) {
+    var f = frac(); compact = v; S.compactOn = v;
+    document.body.classList.toggle("compact", v);
+    document.body.classList.remove("more");
+    save(); syncSliders(); layout(f);
+  }
+  function fullscreen() {
+    var d = document, el = d.documentElement;
+    if (d.fullscreenElement || d.webkitFullscreenElement) {
+      (d.exitFullscreen || d.webkitExitFullscreen).call(d);
+    } else {
+      var req = el.requestFullscreen || el.webkitRequestFullscreen;
+      if (req) { try { var r = req.call(el); if (r && r.catch) r.catch(function () { toast("Fullscreen was blocked"); }); } catch (e) { toast("Fullscreen not available"); } }
+      else toast("Fullscreen not available");
+    }
+  }
+  function updateUI() {
+    $("playBtn").textContent = counting ? "Starting" : (playing ? "Pause" : "Play");
+    $("speedVal").textContent = S.speed;
+    $("mirrorBtn").classList.toggle("on", S.mirror);
+    $("compactBtn").classList.toggle("on", compact);
+    $("themeBtn").textContent = S.light ? "Dark" : "Light";
+    updateInfo();
+  }
+  function syncSliders() {
+    var md = mode();
+    $("fontR").value = md.font; $("fontVal").textContent = md.font;
+    $("widthR").value = md.width; $("widthVal").textContent = md.width;
+  }
+  var toastT = null;
+  function toast(msg) {
+    var t = $("toast"); t.textContent = msg; t.classList.add("show");
+    clearTimeout(toastT); toastT = setTimeout(function () { t.classList.remove("show"); }, 900);
+  }
+
+  // ---------- paste panel ----------
+  function openPaste() { pause(); $("pasteText").value = S.paste || ""; $("paste").classList.add("show"); $("pasteText").focus(); }
+  function closePaste() { $("paste").classList.remove("show"); $("pasteText").blur(); }
+
+  // ---------- wiring ----------
+  function btn(id, fn) {
+    var b = $(id);
+    b.addEventListener("mousedown", function (e) { e.preventDefault(); });
+    b.addEventListener("click", function () { fn(); b.blur(); });
+  }
+  btn("playBtn", toggle); btn("restartBtn", restart);
+  btn("backBtn", function () { nudge(-1); }); btn("fwdBtn", function () { nudge(1); });
+  btn("slowBtn", function () { speed(-1); }); btn("fastBtn", function () { speed(1); });
+  btn("mirrorBtn", function () { setMirror(!S.mirror); });
+  btn("fullBtn", fullscreen);
+  btn("compactBtn", function () { setCompact(!compact); });
+  btn("moreBtn", function () { document.body.classList.toggle("more"); layout(frac()); });
+  btn("themeBtn", function () { setTheme(!S.light); });
+  btn("pasteBtn", openPaste);
+  btn("windowBtn", function () {
+    var url = location.href.split("#")[0] + "#compact";
+    var w = window.open(url, "rq-teleprompter-compact", "width=420,height=720");
+    if (!w) toast("Pop-up blocked. Use the Compact button and resize this window.");
+  });
+  $("pick").addEventListener("change", function () {
+    pause(); S.script = this.value; save(); render(); this.blur();
+    if (S.script === "paste" && !S.paste) openPaste();
+  });
+  $("fontR").addEventListener("input", function () {
+    var f = frac(); mode().font = +this.value; $("fontVal").textContent = this.value; save(); layout(f);
+  });
+  $("widthR").addEventListener("input", function () {
+    var f = frac(); mode().width = +this.value; $("widthVal").textContent = this.value; save(); layout(f);
+  });
+  ["fontR", "widthR"].forEach(function (id) { $(id).addEventListener("change", function () { this.blur(); }); });
+  $("cdSel").addEventListener("change", function () { S.countdown = this.value; save(); this.blur(); });
+  $("pasteUse").addEventListener("click", function () {
+    S.paste = $("pasteText").value; S.script = "paste"; save(); closePaste(); fillPicker(); render();
+  });
+  $("pasteCancel").addEventListener("click", closePaste);
+  $("pasteClear").addEventListener("click", function () { $("pasteText").value = ""; $("pasteText").focus(); });
+  $("stage").addEventListener("wheel", function (e) {
+    e.preventDefault(); offset += e.deltaY; clamp(); paint(); updateInfo();
+  }, { passive: false });
+
+  document.addEventListener("keydown", function (e) {
+    if ($("paste").classList.contains("show")) { if (e.key === "Escape") closePaste(); return; }
+    var t = e.target, tag = t && t.tagName;
+    if (tag === "TEXTAREA" || (tag === "INPUT" && t.type !== "range")) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    var k = e.key;
+    if (k === " " || k === "Spacebar") { e.preventDefault(); if (!e.repeat) toggle(); }
+    else if (k === "ArrowUp") { e.preventDefault(); speed(1); }
+    else if (k === "ArrowDown") { e.preventDefault(); speed(-1); }
+    else if (k === "ArrowLeft") { e.preventDefault(); nudge(-1); }
+    else if (k === "ArrowRight") { e.preventDefault(); nudge(1); }
+    else if (k === "r" || k === "R") restart();
+    else if (k === "f" || k === "F") fullscreen();
+    else if (k === "m" || k === "M") setMirror(!S.mirror);
+    else if (k === "c" || k === "C") setCompact(!compact);
+    else return;
+    if (tag === "SELECT" || tag === "INPUT") t.blur();
+  });
+  var rT = null;
+  window.addEventListener("resize", function () { var f = frac(); clearTimeout(rT); rT = setTimeout(function () { layout(f); }, 60); });
+  // keep a second window (e.g. the compact one) in sync with saved settings
+  window.addEventListener("storage", function (e) {
+    if (e.key !== KEY || playing || counting) return;
+    var oldScript = S.script, oldPaste = S.paste, f = frac();
+    S = load();
+    document.body.classList.toggle("mirror", !!S.mirror);
+    document.body.classList.toggle("light", !!S.light);
+    $("cdSel").value = S.countdown;
+    if (S.script !== oldScript || S.paste !== oldPaste) { fillPicker(); render(); }
+    else { syncSliders(); layout(f); }
+  });
+  window.addEventListener("hashchange", function () { if (/compact/.test(location.hash) && !compact) setCompact(true); });
+
+  // ---------- init ----------
+  document.body.classList.toggle("compact", compact);
+  document.body.classList.toggle("mirror", !!S.mirror);
+  document.body.classList.toggle("light", !!S.light);
+  $("cdSel").value = S.countdown;
+  fillPicker(); syncSliders(); render();
+  window.__tp = { state: function () { return { offset: offset, maxOffset: maxOffset, playing: playing, counting: counting, speed: S.speed, script: S.script, compact: compact, mirror: S.mirror, words: words }; } };
+})();
+</script>
+</body>
+</html>
